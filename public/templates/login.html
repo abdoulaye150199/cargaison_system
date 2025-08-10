@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPduMonde - Connexion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Animations de base */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Classes d'animation */
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .pulsing {
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(59, 130, 246, 0.15);
+            border-radius: 50%;
+        }
+
+        .orbit {
+            position: absolute;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: rotate linear infinite;
+        }
+
+        .orbit-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle at center, 
+                rgba(37, 99, 235, 0.1) 0%, 
+                rgba(29, 78, 216, 0.05) 50%,
+                rgba(30, 58, 138, 0.02) 100%
+            );
+            animation-duration: 30s;
+            opacity: 0.4;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .orbit-2 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle at center, 
+                rgba(59, 130, 246, 0.15) 0%, 
+                rgba(37, 99, 235, 0.1) 50%,
+                rgba(29, 78, 216, 0.05) 100%
+            );
+            animation-duration: 25s;
+            opacity: 0.6;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .orbit-3 {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at center, 
+                rgba(96, 165, 250, 0.2) 0%, 
+                rgba(59, 130, 246, 0.15) 50%,
+                rgba(37, 99, 235, 0.1) 100%
+            );
+            animation-duration: 20s;
+            opacity: 0.8;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .glow {
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+        }
+
+        .svg-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 3s ease-in-out forwards;
+        }
+
+        /* Améliorer l'effet de lueur */
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, 
+                rgba(59, 130, 246, 0.2) 0%, 
+                rgba(37, 99, 235, 0.1) 30%,
+                transparent 70%
+            );
+            filter: blur(20px);
+            animation: pulse 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-950">
+    <div class="min-h-screen flex items-center">
+        <!-- Animation Section -->
+        <div class="hidden lg:flex w-1/2 h-screen bg-gray-900 relative justify-center items-center overflow-hidden">
+            <!-- Particules en arrière-plan -->
+            <div class="particles" id="particles"></div>
+            
+            <!-- Orbites animées -->
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <!-- Effet de lueur -->
+                <div class="glow-effect"></div>
+                
+                <!-- Cercles animés -->
+                <div class="orbit orbit-1"></div>
+                <div class="orbit orbit-2"></div>
+                <div class="orbit orbit-3"></div>
+            </div>
+            
+            <!-- Logo et contenu central -->
+            <div class="floating z-10 relative">
+                <!-- Cercle brillant derrière le logo -->
+                <div class="absolute inset-0 bg-blue-500/20 rounded-full blur-xl pulsing"></div>
+                
+                <!-- Logo principal -->
+                <div class="w-32 h-32 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center glow relative">
+                    <svg class="w-20 h-20 text-white svg-path" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path class="svg-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </div>
+                
+                <!-- Texte avec effet de gradient -->
+                <div class="text-center mt-6">
+                    <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                        GPduMonde
+                    </h2>
+                    <p class="text-blue-400 mt-2 text-lg">
+                        Système de gestion de cargaisons
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Form Section -->
+        <div class="w-full lg:w-1/2 flex justify-center items-center p-8">
+            <div class="max-w-md w-full">
+                <!-- Card du formulaire -->
+                <div class="bg-gray-900 rounded-xl shadow-2xl">
+                    <div class="p-8">
+                        <h2 class="text-xl font-semibold text-white text-center mb-8">
+                            Connexion Administrateur
+                        </h2>
+
+                        <form id="loginForm" class="space-y-6">
+                            <!-- Email -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    Email
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="email"
+                                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-200"
+                                    placeholder="admin@gpdum.com"
+                                    value="admin@gpdum.com"
+                                >
+                            </div>
+
+                            <!-- Mot de passe -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    Mot de passe
+                                </label>
+                                <input 
+                                    type="password" 
+                                    id="password"
+                                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-200"
+                                    placeholder="••••••••"
+                                    value="admin123"
+                                >
+                            </div>
+
+                            <!-- Options -->
+                            <div class="flex items-center justify-between text-sm">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded bg-gray-800 border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                    <span class="ml-2 text-gray-300">Se souvenir de moi</span>
+                                </label>
+                                <a href="#" class="text-blue-500 hover:text-blue-400">
+                                    Mot de passe oublié?
+                                </a>
+                            </div>
+
+                            <!-- Bouton de connexion -->
+                            <button 
+                                type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                            >
+                                Se connecter
+                            </button>
+                        </form>
+
+                        <!-- Message d'erreur -->
+                        <div id="error-message" class="mt-4 text-red-400 text-sm text-center hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('error-message');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    
+    // Clear previous errors
+    errorDiv.classList.add('hidden');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Connexion...';
+    
+    try {
+        console.log('Attempting login with:', { email }); // Debug log
+        
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        console.log('Response status:', response.status); // Debug log
+        console.log('Response headers:', response.headers.get('content-type')); // Debug log
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+        }
+        
+        const data = await response.json();
+        console.log('Response data:', data); // Debug log
+        
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            window.location.href = '/dashboard';
+        } else {
+            errorDiv.textContent = data.message || 'Erreur de connexion';
+            errorDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        errorDiv.textContent = 'Erreur de connexion au serveur: ' + error.message;
+        errorDiv.classList.remove('hidden');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Se connecter';
+    }
+});
+
+// Création des particules
+function createParticles() {
+    const container = document.getElementById('particles');
+    const particleCount = 50;
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        // Position aléatoire
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        
+        // Animation personnalisée
+        particle.style.animation = `
+            pulse ${2 + Math.random() * 4}s ease-in-out infinite,
+            float ${10 + Math.random() * 10}s linear infinite
+        `;
+        
+        container.appendChild(particle);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', createParticles);
+</script>
+</body>
+</html>

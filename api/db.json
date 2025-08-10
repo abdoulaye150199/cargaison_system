@@ -1,0 +1,41 @@
+{
+  "cargaisons": [
+    {
+      "id": "CARG1691680000",
+      "numero": "CRG001",
+      "type": "MARITIME",
+      "lieuDepart": "Paris",
+      "lieuArrivee": "New York",
+      "etatAvancement": "EN_COURS",
+      "etatGlobal": "OUVERT",
+      "dateCreation": "2025-08-10 00:00:00"
+    }
+  ],
+  "colis": [
+    {
+      "id": "COL1691680000",
+      "code": "GP12345678",
+      "expediteur": {
+        "nom": "Martin",
+        "prenom": "Jean",
+        "telephone": "+33123456789",
+        "adresse": "123 Rue de Paris",
+        "email": "jean.martin@email.com"
+      },
+      "destinataire": {
+        "nom": "Smith",
+        "prenom": "John",
+        "telephone": "+1234567890",
+        "adresse": "456 Broadway St",
+        "email": "john.smith@email.com"
+      },
+      "poids": 25.5,
+      "typeProduit": "MATERIEL",
+      "typeCargaison": "MARITIME",
+      "prix": 25500,
+      "etat": "EN_COURS",
+      "dateCreation": "2025-08-10 00:00:00",
+      "cargaisonId": "CARG1691680000"
+    }
+  ]
+}

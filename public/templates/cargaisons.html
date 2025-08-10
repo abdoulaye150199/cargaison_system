@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPduMonde - Liste des Cargaisons</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header avec barre de recherche et bouton CTA -->
+    <div class="bg-gray-800 border-b border-gray-700 py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Liste des Cargaisons</h1>
+                <div class="flex items-center space-x-4">
+                    <!-- Barre de recherche -->
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            placeholder="Rechercher une cargaison..."
+                            class="w-96 px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                        <span class="absolute right-3 top-2.5">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <!-- Bouton Créer -->
+                    <a href="/cargaisons/create" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition duration-200 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Créer une cargaison
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Table des cargaisons -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-medium">Numéro</th>
+                        <th class="px-6 py-3 text-left text-sm font-medium">Type</th>
+                        <th class="px-6 py-3 text-left text-sm font-medium">Départ</th>
+                        <th class="px-6 py-3 text-left text-sm font-medium">Arrivée</th>
+                        <th class="px-6 py-3 text-left text-sm font-medium">État</th>
+                        <th class="px-6 py-3 text-left text-sm font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cargaisonsTable" class="divide-y divide-gray-700">
+                    <!-- Le contenu sera injecté dynamiquement -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // Fonction pour charger les cargaisons
+        async function loadCargaisons() {
+            try {
+                const response = await fetch('/api/cargaisons');
+                const cargaisons = await response.json();
+                
+                const tbody = document.getElementById('cargaisonsTable');
+                tbody.innerHTML = cargaisons.map(cargaison => `
+                    <tr class="hover:bg-gray-700">
+                        <td class="px-6 py-4 text-sm">${cargaison.numero}</td>
+                        <td class="px-6 py-4 text-sm">${cargaison.type}</td>
+                        <td class="px-6 py-4 text-sm">${cargaison.lieuDepart}</td>
+                        <td class="px-6 py-4 text-sm">${cargaison.lieuArrivee}</td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="px-2 py-1 text-xs rounded-full ${getStatusColor(cargaison.etatAvancement)}">
+                                ${cargaison.etatAvancement}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <button onclick="editCargaison('${cargaison.id}')" class="text-blue-400 hover:text-blue-300 mr-2">
+                                Modifier
+                            </button>
+                            <button onclick="deleteCargaison('${cargaison.id}')" class="text-red-400 hover:text-red-300">
+                                Supprimer
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Erreur lors du chargement des cargaisons:', error);
+            }
+        }
+
+        // Fonction pour obtenir la couleur du statut
+        function getStatusColor(status) {
+            const colors = {
+                'EN_ATTENTE': 'bg-yellow-900 text-yellow-200',
+                'EN_COURS': 'bg-blue-900 text-blue-200',
+                'ARRIVE': 'bg-green-900 text-green-200',
+                'EN_RETARD': 'bg-red-900 text-red-200'
+            };
+            return colors[status] || 'bg-gray-900 text-gray-200';
+        }
+
+        // Charger les cargaisons au chargement de la page
+        document.addEventListener('DOMContentLoaded', loadCargaisons);
+    </script>
+</body>
+</html>

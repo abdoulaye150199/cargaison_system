@@ -1,0 +1,478 @@
+// Check authentication
+const token = localStorage.getItem("token")
+const user = JSON.parse(localStorage.getItem("user") || "{}")
+
+if (!token) {
+  window.location.href = "/login.html"
+}
+
+// Set user email
+document.getElementById("userEmail").textContent = user.email || ""
+
+// Logout functionality
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("token")
+  localStorage.removeItem("user")
+  window.location.href = "/login.html"
+})
+
+// Navigation
+document.querySelectorAll(".nav-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const section = e.target.dataset.section
+    showSection(section)
+
+    // Update active nav
+    document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("bg-blue-600"))
+    e.target.classList.add("bg-blue-600")
+  })
+})
+
+// Show section function
+function showSection(sectionName) {
+  document.querySelectorAll(".section").forEach((section) => {
+    section.classList.add("hidden")
+  })
+  document.getElementById(`${sectionName}-section`).classList.remove("hidden")
+
+  // Load data for the section
+  switch (sectionName) {
+    case "dashboard":
+      loadDashboardData()
+      break
+    case "cargaisons":
+      loadCargaisons()
+      break
+    case "colis":
+      loadColis()
+      break
+    case "clients":
+      loadClients()
+      break
+  }
+}
+
+// Load dashboard data
+async function loadDashboardData() {
+  try {
+    const [cargaisonsRes, colisRes] = await Promise.all([fetch("/api/cargaisons"), fetch("/api/colis")])
+
+    const cargaisons = await cargaisonsRes.json()
+    const colis = await colisRes.json()
+
+    document.getElementById("totalCargaisons").textContent = cargaisons.length
+    document.getElementById("totalColis").textContent = colis.length
+    document.getElementById("enTransit").textContent = colis.filter((c) => c.etat === "EN_COURS").length
+    document.getElementById("totalClients").textContent = new Set(colis.map((c) => c.expediteur.id)).size
+  } catch (error) {
+    console.error("Error loading dashboard data:", error)
+  }
+}
+
+// Load cargaisons
+async function loadCargaisons() {
+  try {
+    const response = await fetch("/api/cargaisons")
+    const cargaisons = await response.json()
+
+    const tbody = document.getElementById("cargaisonsTable")
+    tbody.innerHTML = cargaisons
+      .map(
+        (cargaison) => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${cargaison.numero}</td>
+                <td class="py-3 px-4">${cargaison.type}</td>
+                <td class="py-3 px-4">${cargaison.lieuDepart}</td>
+                <td class="py-3 px-4">${cargaison.lieuArrivee}</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-1 rounded-full text-xs ${getStatusColor(cargaison.etatAvancement)}">
+                        ${cargaison.etatAvancement}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <button class="text-blue-400 hover:text-blue-300 mr-2" onclick="editCargaison('${cargaison.id}')">
+                        Modifier
+                    </button>
+                    <button class="text-red-400 hover:text-red-300" onclick="deleteCargaison('${cargaison.id}')">
+                        Supprimer
+                    </button>
+                </td>
+            </tr>
+        `,
+      )
+      .join("")
+  } catch (error) {
+    console.error("Error loading cargaisons:", error)
+  }
+}
+
+// Load colis
+async function loadColis() {
+  try {
+    const response = await fetch("/api/colis")
+    const colis = await response.json()
+
+    const tbody = document.getElementById("colisTable")
+    tbody.innerHTML = colis
+      .map(
+        (c) => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${c.code}</td>
+                <td class="py-3 px-4">${c.expediteur.nom} ${c.expediteur.prenom}</td>
+                <td class="py-3 px-4">${c.destinataire.nom} ${c.destinataire.prenom}</td>
+                <td class="py-3 px-4">${c.poids} kg</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-1 rounded-full text-xs ${getStatusColor(c.etat)}">
+                        ${c.etat}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <button class="text-blue-400 hover:text-blue-300 mr-2" onclick="editColis('${c.id}')">
+                        Modifier
+                    </button>
+                    <button class="text-green-400 hover:text-green-300 mr-2" onclick="markAsRecovered('${c.code}')">
+                        Récupéré
+                    </button>
+                    <button class="text-red-400 hover:text-red-300" onclick="markAsLost('${c.code}')">
+                        Perdu
+                    </button>
+                </td>
+            </tr>
+        `,
+      )
+      .join("")
+  } catch (error) {
+    console.error("Error loading colis:", error)
+  }
+}
+
+// Load clients
+async function loadClients() {
+  try {
+    const response = await fetch("/api/clients")
+    const clients = await response.json()
+
+    const tbody = document.getElementById("clientsTable")
+    tbody.innerHTML = clients
+      .map(
+        (client) => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${client.nom}</td>
+                <td class="py-3 px-4">${client.prenom}</td>
+                <td class="py-3 px-4">${client.telephone}</td>
+                <td class="py-3 px-4">${client.email || "N/A"}</td>
+                <td class="py-3 px-4">${client.adresse}</td>
+            </tr>
+        `,
+      )
+      .join("")
+  } catch (error) {
+    console.error("Error loading clients:", error)
+  }
+}
+
+// Utility functions
+function getStatusColor(status) {
+  const colors = {
+    EN_ATTENTE: "bg-yellow-900 text-yellow-200",
+    EN_COURS: "bg-blue-900 text-blue-200",
+    ARRIVE: "bg-green-900 text-green-200",
+    RECUPERE: "bg-green-900 text-green-200",
+    PERDU: "bg-red-900 text-red-200",
+    ARCHIVE: "bg-gray-900 text-gray-200",
+    OUVERT: "bg-green-900 text-green-200",
+    FERME: "bg-red-900 text-red-200",
+  }
+  return colors[status] || "bg-gray-900 text-gray-200"
+}
+
+// Modal functions
+function showModal(title, content) {
+  const modal = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">${title}</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div>${content}</div>
+            </div>
+        </div>
+    `
+  document.getElementById("modalContainer").innerHTML = modal
+}
+
+function closeModal() {
+  document.getElementById("modalContainer").innerHTML = ""
+}
+
+// New Cargaison Modal
+document.getElementById("newCargaisonBtn").addEventListener("click", () => {
+  const content = `
+        <form id="newCargaisonForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Numéro</label>
+                <input type="text" name="numero" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Type</label>
+                <select name="type" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <option value="MARITIME">Maritime</option>
+                    <option value="AERIENNE">Aérienne</option>
+                    <option value="ROUTIERE">Routière</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Poids Maximum (kg)</label>
+                <input type="number" name="poidsMax" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Lieu de Départ</label>
+                <input type="text" name="lieuDepart" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Lieu d'Arrivée</label>
+                <input type="text" name="lieuArrivee" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Distance (km)</label>
+                <input type="number" name="distance" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition duration-200">
+                    Annuler
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition duration-200">
+                    Créer
+                </button>
+            </div>
+        </form>
+    `
+
+  showModal("Nouvelle Cargaison", content)
+
+  document.getElementById("newCargaisonForm").addEventListener("submit", async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const data = Object.fromEntries(formData)
+
+    try {
+      const response = await fetch("/api/cargaisons", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        closeModal()
+        loadCargaisons()
+      }
+    } catch (error) {
+      console.error("Error creating cargaison:", error)
+    }
+  })
+})
+
+// New Colis Modal
+document.getElementById("newColisBtn").addEventListener("click", () => {
+  const content = `
+        <form id="newColisForm" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <h4 class="font-semibold mb-2">Expéditeur</h4>
+                    <input type="text" name="expediteur_nom" placeholder="Nom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="text" name="expediteur_prenom" placeholder="Prénom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="tel" name="expediteur_telephone" placeholder="Téléphone" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="text" name="expediteur_adresse" placeholder="Adresse" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="email" name="expediteur_email" placeholder="Email (optionnel)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Destinataire</h4>
+                    <input type="text" name="destinataire_nom" placeholder="Nom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="text" name="destinataire_prenom" placeholder="Prénom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="tel" name="destinataire_telephone" placeholder="Téléphone" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="text" name="destinataire_adresse" placeholder="Adresse" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" required>
+                    <input type="email" name="destinataire_email" placeholder="Email (optionnel)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Poids (kg)</label>
+                    <input type="number" name="poids" step="0.1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Type de Produit</label>
+                    <select name="typeProduit" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <option value="MATERIEL">Matériel</option>
+                        <option value="ALIMENTAIRE">Alimentaire</option>
+                        <option value="CHIMIQUE">Chimique</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Type de Cargaison</label>
+                    <select name="typeCargaison" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <option value="MARITIME">Maritime</option>
+                        <option value="AERIENNE">Aérienne</option>
+                        <option value="ROUTIERE">Routière</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition duration-200">
+                    Annuler
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition duration-200">
+                    Créer
+                </button>
+            </div>
+        </form>
+    `
+
+  showModal("Nouveau Colis", content)
+
+  document.getElementById("newColisForm").addEventListener("submit", async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const data = Object.fromEntries(formData)
+
+    // Structure the data properly
+    const colisData = {
+      expediteur: {
+        nom: data.expediteur_nom,
+        prenom: data.expediteur_prenom,
+        telephone: data.expediteur_telephone,
+        adresse: data.expediteur_adresse,
+        email: data.expediteur_email,
+      },
+      destinataire: {
+        nom: data.destinataire_nom,
+        prenom: data.destinataire_prenom,
+        telephone: data.destinataire_telephone,
+        adresse: data.destinataire_adresse,
+        email: data.destinataire_email,
+      },
+      poids: Number.parseFloat(data.poids),
+      typeProduit: data.typeProduit,
+      typeCargaison: data.typeCargaison,
+    }
+
+    try {
+      const response = await fetch("/api/colis", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(colisData),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        closeModal()
+        loadColis()
+
+        // Show receipt
+        showReceipt(result.colis)
+      }
+    } catch (error) {
+      console.error("Error creating colis:", error)
+    }
+  })
+})
+
+// Show receipt
+function showReceipt(colis) {
+  const content = `
+        <div class="bg-white text-black p-6 rounded-lg">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold">GPduMonde</h2>
+                <p class="text-gray-600">Reçu d'Expédition</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="font-semibold mb-2">Expéditeur</h3>
+                    <p>${colis.expediteur.nom} ${colis.expediteur.prenom}</p>
+                    <p>${colis.expediteur.telephone}</p>
+                    <p>${colis.expediteur.adresse}</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2">Destinataire</h3>
+                    <p>${colis.destinataire.nom} ${colis.destinataire.prenom}</p>
+                    <p>${colis.destinataire.telephone}</p>
+                    <p>${colis.destinataire.adresse}</p>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-300 pt-4 mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p><strong>Code de suivi:</strong> ${colis.code}</p>
+                        <p><strong>Poids:</strong> ${colis.poids} kg</p>
+                    </div>
+                    <div>
+                        <p><strong>Type:</strong> ${colis.typeProduit}</p>
+                        <p><strong>Prix:</strong> ${colis.prix.toLocaleString()} FCFA</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center text-sm text-gray-600">
+                <p>Conservez ce reçu pour le suivi de votre colis</p>
+                <p>Date: ${new Date().toLocaleDateString("fr-FR")}</p>
+            </div>
+            
+            <div class="flex justify-center mt-4">
+                <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-md mr-2">
+                    Imprimer
+                </button>
+                <button onclick="closeModal()" class="bg-gray-600 text-white px-4 py-2 rounded-md">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `
+
+  showModal("Reçu d'Expédition", content)
+}
+
+// Action functions
+async function markAsRecovered(code) {
+  try {
+    const response = await fetch(`/api/colis/${code}/recover`, {
+      method: "PUT",
+    })
+
+    if (response.ok) {
+      loadColis()
+    }
+  } catch (error) {
+    console.error("Error marking as recovered:", error)
+  }
+}
+
+async function markAsLost(code) {
+  if (confirm("Êtes-vous sûr de vouloir marquer ce colis comme perdu?")) {
+    try {
+      const response = await fetch(`/api/colis/${code}/lost`, {
+        method: "PUT",
+      })
+
+      if (response.ok) {
+        loadColis()
+      }
+    } catch (error) {
+      console.error("Error marking as lost:", error)
+    }
+  }
+}
+
+// Initialize dashboard
+showSection("dashboard")

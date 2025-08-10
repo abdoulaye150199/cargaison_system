@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPduMonde - Création de Cargaison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="min-h-screen p-6">
+        <main class="max-w-4xl mx-auto">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h1 class="text-2xl font-bold mb-6">Créer une nouvelle cargaison</h1>
+                
+                <form id="cargaisonForm" class="space-y-6">
+                    <!-- Informations de base -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Numéro</label>
+                            <input 
+                                type="text" 
+                                id="numero"
+                                name="numero"
+                                required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="CRG001"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Type de cargaison</label>
+                            <select 
+                                id="type"
+                                name="type"
+                                required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Sélectionner un type</option>
+                                <option value="MARITIME">Maritime</option>
+                                <option value="AERIENNE">Aérienne</option>
+                                <option value="ROUTIERE">Routière</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Capacité et Prix -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Poids Maximum (kg)</label>
+                            <input 
+                                type="number" 
+                                id="poidsMax"
+                                name="poidsMax"
+                                required
+                                min="0"
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Types de produits acceptés</label>
+                            <select 
+                                id="typesProduits"
+                                name="typesProduits"
+                                multiple
+                                required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="MATERIEL">Matériel</option>
+                                <option value="ALIMENTAIRE">Alimentaire</option>
+                                <option value="CHIMIQUE">Chimique</option>
+                                <option value="FRAGILE">Fragile</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Trajet -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium">Trajet</h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Lieu de départ</label>
+                                <input 
+                                    type="text" 
+                                    id="lieuDepart"
+                                    name="lieuDepart"
+                                    required
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ville de départ"
+                                >
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Lieu d'arrivée</label>
+                                <input 
+                                    type="text" 
+                                    id="lieuArrivee"
+                                    name="lieuArrivee"
+                                    required
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ville d'arrivée"
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Distance (km)</label>
+                                <input 
+                                    type="number" 
+                                    id="distance"
+                                    name="distance"
+                                    required
+                                    min="0"
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- État -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">État d'avancement</label>
+                            <select 
+                                id="etatAvancement"
+                                name="etatAvancement"
+                                required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="EN_ATTENTE">En attente</option>
+                                <option value="EN_COURS">En cours</option>
+                                <option value="TERMINE">Terminé</option>
+                                <option value="ANNULE">Annulé</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">État global</label>
+                            <select 
+                                id="etatGlobal"
+                                name="etatGlobal"
+                                required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="OUVERT">Ouvert</option>
+                                <option value="FERME">Fermé</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button 
+                            type="button"
+                            onclick="window.history.back()"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition duration-200"
+                        >
+                            Annuler
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition duration-200"
+                        >
+                            Créer la cargaison
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('cargaisonForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const cargaison = {
+                numero: formData.get('numero'),
+                type: formData.get('type'),
+                poidsMax: Number(formData.get('poidsMax')),
+                typesProduits: Array.from(e.target.typesProduits.selectedOptions).map(opt => opt.value),
+                lieuDepart: formData.get('lieuDepart'),
+                lieuArrivee: formData.get('lieuArrivee'),
+                distance: Number(formData.get('distance')),
+                etatAvancement: formData.get('etatAvancement'),
+                etatGlobal: formData.get('etatGlobal'),
+                prix: 0, // Sera calculé en fonction des colis
+                dateCreation: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch('/api/cargaisons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(cargaison)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la création de la cargaison');
+                }
+
+                const result = await response.json();
+                alert('Cargaison créée avec succès !');
+                window.location.href = '/dashboard'; // Redirection vers le tableau de bord
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors de la création de la cargaison: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

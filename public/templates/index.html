@@ -224,6 +224,7 @@
                 
                 if (data.success && data.colis) {
                     displayPackageInfo(data.colis);
+                    updateMapWithPackage(data.colis);
                 } else {
                     showError(data.message || 'Colis non trouvé');
                 }
@@ -261,10 +262,13 @@
                         <h4 class="font-semibold mb-3">Informations du colis</h4>
                         <div class="space-y-2">
                             <p><span class="text-gray-400">Code:</span> ${colis.code}</p>
+                            <p><span class="text-gray-400">Nombre:</span> ${colis.nombreColis || 1} colis</p>
                             <p><span class="text-gray-400">Poids:</span> ${colis.poids} kg</p>
                             <p><span class="text-gray-400">Type:</span> ${colis.typeProduit}</p>
+                            <p><span class="text-gray-400">Cargaison:</span> ${colis.typeCargaison}</p>
                             <p><span class="text-gray-400">Prix:</span> ${colis.prix.toLocaleString()} FCFA</p>
                             <p><span class="text-gray-400">Date création:</span> ${new Date(colis.dateCreation).toLocaleDateString('fr-FR')}</p>
+                            ${colis.estimatedArrival ? `<p><span class="text-gray-400">Arrivée estimée:</span> ${new Date(colis.estimatedArrival).toLocaleDateString('fr-FR')}</p>` : ''}
                         </div>
                     </div>
                     
@@ -280,6 +284,7 @@
                             <p><span class="text-gray-400">Expéditeur:</span> ${colis.expediteur.nom} ${colis.expediteur.prenom}</p>
                             <p><span class="text-gray-400">Destinataire:</span> ${colis.destinataire.nom} ${colis.destinataire.prenom}</p>
                             <p><span class="text-gray-400">Téléphone:</span> ${colis.destinataire.telephone}</p>
+                            ${colis.destinataire.email ? `<p><span class="text-gray-400">Email:</span> ${colis.destinataire.email}</p>` : ''}
                         </div>
                     </div>
                 </div>
@@ -294,10 +299,51 @@
             errorDiv.classList.remove('hidden');
         }
 
+        function updateMapWithPackage(colis) {
+            // Add a marker for the package location (simplified)
+            const packageIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `
+                    <div style="
+                        background-color: #ef4444;
+                        width: 16px;
+                        height: 16px;
+                        border-radius: 50%;
+                        border: 2px solid #dc2626;
+                        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+                        animation: pulse 2s infinite;
+                    "></div>
+                `,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            // For demo purposes, place the package at a random city
+            const cities = [
+                { name: "Dakar", coords: [14.7167, -17.4677] },
+                { name: "Paris", coords: [48.8566, 2.3522] },
+                { name: "New York", coords: [40.7128, -74.0060] },
+                { name: "Dubai", coords: [25.2048, 55.2708] },
+                { name: "Shanghai", coords: [31.2304, 121.4737] }
+            ];
+            
+            const randomCity = cities[Math.floor(Math.random() * cities.length)];
+            
+            L.marker(randomCity.coords, { icon: packageIcon })
+             .bindPopup(`
+                <div class="text-center">
+                    <h3 class="font-bold">Colis ${colis.code}</h3>
+                    <p class="text-sm">État: ${colis.etat}</p>
+                    <p class="text-sm">Localisation: ${randomCity.name}</p>
+                </div>
+             `)
+             .addTo(map);
+        }
+
         // Attendre que le DOM soit chargé
         document.addEventListener('DOMContentLoaded', function() {
             // Initialiser la carte
-            const map = L.map('map', {
+            window.map = L.map('map', {
                 center: [14.7167, -17.4677],
                 zoom: 2,
                 minZoom: 2,
@@ -386,7 +432,7 @@
                     <span>Fermer</span>
                 `;
                 btn.classList.add('map-overlay');
-                map.invalidateSize();
+                window.map.invalidateSize();
             } else {
                 // Sortir du plein écran
                 mapContainer.classList.remove('fullscreen-map');
@@ -397,7 +443,7 @@
                     <span>Plein écran</span>
                 `;
                 btn.classList.remove('map-overlay');
-                map.invalidateSize();
+                window.map.invalidateSize();
             }
         });
     </script>

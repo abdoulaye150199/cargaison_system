@@ -20,6 +20,13 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = str_replace('/api/', '', $_SERVER['REQUEST_URI']);
 $path = rtrim($path, '/');
 
+// Parse query parameters
+$queryParams = [];
+if (strpos($path, '?') !== false) {
+    list($path, $queryString) = explode('?', $path, 2);
+    parse_str($queryString, $queryParams);
+}
+
 // Debug logging
 error_log("API Request: $method $path");
 
@@ -53,6 +60,38 @@ try {
             handleTrackColis($matches[1]);
             break;
             
+        case preg_match('/^PUT:colis\/(.+)\/recover$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleRecoverColis($matches[1]);
+            break;
+            
+        case preg_match('/^PUT:colis\/(.+)\/lost$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleLostColis($matches[1]);
+            break;
+            
+        case preg_match('/^PUT:colis\/(.+)\/archive$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleArchiveColis($matches[1]);
+            break;
+            
+        case preg_match('/^PUT:colis\/(.+)\/state$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleChangeColisState($matches[1]);
+            break;
+            
+        case preg_match('/^PUT:cargaisons\/(.+)\/close$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleCloseCargaison($matches[1]);
+            break;
+            
+        case preg_match('/^PUT:cargaisons\/(.+)\/reopen$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleReopenCargaison($matches[1]);
+            break;
+            
+        case preg_match('/^DELETE:cargaisons\/(.+)$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleDeleteCargaison($matches[1]);
+            break;
+            
+        case preg_match('/^DELETE:colis\/(.+)$/', $method . ':' . $path, $matches) ? $method . ':' . $path : '':
+            handleDeleteColis($matches[1]);
+            break;
+            
         default:
             http_response_code(404);
             echo json_encode([
@@ -66,7 +105,7 @@ try {
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error']);
+    echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
 }
 
 function handleLogin() {
@@ -94,8 +133,6 @@ function handleLogin() {
 }
 
 function handleGetCargaisons() {
-    header('Content-Type: application/json');
-    
     $db = getDatabase();
     echo json_encode($db['cargaisons'] ?? []);
 }
@@ -112,19 +149,36 @@ function handleCreateCargaison() {
     
     $db = getDatabase();
     
+    // Generate coordinates for departure and arrival locations
+    $departCoords = getLocationCoordinates($data['lieuDepart'] ?? '');
+    $arriveeCoords = getLocationCoordinates($data['lieuArrivee'] ?? '');
+    
     $cargaison = [
         'id' => 'CARG' . time(),
         'numero' => $data['numero'] ?? '',
         'poidsMax' => (float)($data['poidsMax'] ?? 0),
+        'produits' => [],
         'prix' => 0,
+        'trajet' => [
+            'lieuDepart' => [
+                'nom' => $data['lieuDepart'] ?? '',
+                'coordonnees' => $departCoords
+            ],
+            'lieuArrivee' => [
+                'nom' => $data['lieuArrivee'] ?? '',
+                'coordonnees' => $arriveeCoords
+            ]
+        ],
         'lieuDepart' => $data['lieuDepart'] ?? '',
         'lieuArrivee' => $data['lieuArrivee'] ?? '',
         'distance' => (float)($data['distance'] ?? 0),
         'type' => $data['type'] ?? 'ROUTIERE',
-        'etatAvancement' => 'EN_ATTENTE',
-        'etatGlobal' => 'OUVERT',
+        'etatAvancement' => $data['etatAvancement'] ?? 'EN_ATTENTE',
+        'etatGlobal' => $data['etatGlobal'] ?? 'OUVERT',
         'dateCreation' => date('Y-m-d H:i:s'),
-        'produits' => []
+        'dateDepart' => null,
+        'dateArrivee' => null,
+        'typesProduits' => $data['typesProduits'] ?? ['MATERIEL']
     ];
     
     $db['cargaisons'][] = $cargaison;
@@ -150,6 +204,9 @@ function handleCreateColis() {
     
     $db = getDatabase();
     
+    // Calculate price based on weight and product type
+    $prix = calculatePrice((float)($data['poids'] ?? 0), $data['typeProduit'] ?? 'MATERIEL');
+    
     $colis = [
         'id' => 'COL' . time(),
         'code' => generateTrackingCode(),
@@ -158,10 +215,11 @@ function handleCreateColis() {
         'poids' => (float)($data['poids'] ?? 0),
         'typeProduit' => $data['typeProduit'] ?? 'MATERIEL',
         'typeCargaison' => $data['typeCargaison'] ?? 'ROUTIERE',
-        'prix' => max(10000, calculatePrice((float)($data['poids'] ?? 0), $data['typeProduit'] ?? 'MATERIEL')),
+        'prix' => $prix,
         'etat' => 'EN_ATTENTE',
         'dateCreation' => date('Y-m-d H:i:s'),
-        'cargaisonId' => null
+        'cargaisonId' => $data['cargaisonId'] ?? null,
+        'nombreColis' => (int)($data['nombreColis'] ?? 1)
     ];
     
     $db['colis'][] = $colis;
@@ -203,6 +261,17 @@ function handleCreateColis() {
         ]);
     }
     
+    // If cargaison is specified, add colis to it
+    if ($colis['cargaisonId']) {
+        foreach ($db['cargaisons'] as &$cargaison) {
+            if ($cargaison['id'] === $colis['cargaisonId']) {
+                $cargaison['produits'][] = $colis['id'];
+                $cargaison['prix'] += $colis['prix'];
+                break;
+            }
+        }
+    }
+    
     saveDatabase($db);
     
     echo json_encode(['success' => true, 'colis' => $colis]);
@@ -214,62 +283,28 @@ function handleGetClients() {
 }
 
 function handleTrackColis($code) {
-    // Définir les en-têtes avant toute sortie
-    header('Content-Type: application/json');
+    $db = getDatabase();
     
-    // Chemin absolu vers db.json
-    $dbPath = __DIR__ . '/db.json';
-    
-    // Vérifier si le fichier existe
-    if (!file_exists($dbPath)) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Database file not found'
-        ]);
-        return;
-    }
-    
-    try {
-        // Lire le contenu du fichier
-        $jsonContent = file_get_contents($dbPath);
-        $db = json_decode($jsonContent, true);
-        
-        // Vérifier si la lecture a réussi
-        if ($db === null) {
-            http_response_code(500);
+    foreach ($db['colis'] as $colis) {
+        if ($colis['code'] === $code) {
+            // Add estimated arrival time if in transit
+            if ($colis['etat'] === 'EN_COURS') {
+                $colis['estimatedArrival'] = calculateEstimatedArrival($colis);
+            }
+            
             echo json_encode([
-                'success' => false,
-                'message' => 'Error reading database'
+                'success' => true,
+                'colis' => $colis
             ]);
             return;
         }
-        
-        // Chercher le colis
-        foreach ($db['colis'] as $colis) {
-            if ($colis['code'] === $code) {
-                echo json_encode([
-                    'success' => true,
-                    'colis' => $colis
-                ]);
-                return;
-            }
-        }
-        
-        // Si le colis n'est pas trouvé
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Colis non trouvé'
-        ]);
-        
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Erreur serveur: ' . $e->getMessage()
-        ]);
     }
+    
+    http_response_code(404);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Colis non trouvé ou annulé'
+    ]);
 }
 
 function handleRecoverColis($code) {
@@ -279,6 +314,7 @@ function handleRecoverColis($code) {
     foreach ($db['colis'] as &$colis) {
         if ($colis['code'] === $code) {
             $colis['etat'] = 'RECUPERE';
+            $colis['dateRecuperation'] = date('Y-m-d H:i:s');
             $found = true;
             break;
         }
@@ -300,6 +336,7 @@ function handleLostColis($code) {
     foreach ($db['colis'] as &$colis) {
         if ($colis['code'] === $code) {
             $colis['etat'] = 'PERDU';
+            $colis['datePerdu'] = date('Y-m-d H:i:s');
             $found = true;
             break;
         }
@@ -308,6 +345,153 @@ function handleLostColis($code) {
     if ($found) {
         saveDatabase($db);
         echo json_encode(['success' => true, 'message' => 'Colis marqué comme perdu']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Colis non trouvé']);
+    }
+}
+
+function handleArchiveColis($code) {
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['colis'] as &$colis) {
+        if ($colis['code'] === $code) {
+            $colis['etat'] = 'ARCHIVE';
+            $colis['dateArchivage'] = date('Y-m-d H:i:s');
+            $found = true;
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'Colis archivé']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Colis non trouvé']);
+    }
+}
+
+function handleChangeColisState($code) {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    
+    if (!$data || !isset($data['etat'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'État requis']);
+        return;
+    }
+    
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['colis'] as &$colis) {
+        if ($colis['code'] === $code) {
+            $colis['etat'] = $data['etat'];
+            $colis['dateModification'] = date('Y-m-d H:i:s');
+            $found = true;
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'État du colis modifié']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Colis non trouvé']);
+    }
+}
+
+function handleCloseCargaison($id) {
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['cargaisons'] as &$cargaison) {
+        if ($cargaison['id'] === $id) {
+            $cargaison['etatGlobal'] = 'FERME';
+            $cargaison['dateFermeture'] = date('Y-m-d H:i:s');
+            $found = true;
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'Cargaison fermée']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Cargaison non trouvée']);
+    }
+}
+
+function handleReopenCargaison($id) {
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['cargaisons'] as &$cargaison) {
+        if ($cargaison['id'] === $id) {
+            if ($cargaison['etatAvancement'] === 'EN_ATTENTE') {
+                $cargaison['etatGlobal'] = 'OUVERT';
+                $cargaison['dateReouverture'] = date('Y-m-d H:i:s');
+                $found = true;
+            } else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Impossible de rouvrir une cargaison qui n\'est pas en attente']);
+                return;
+            }
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'Cargaison rouverte']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Cargaison non trouvée']);
+    }
+}
+
+function handleDeleteCargaison($id) {
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['cargaisons'] as $index => $cargaison) {
+        if ($cargaison['id'] === $id) {
+            unset($db['cargaisons'][$index]);
+            $db['cargaisons'] = array_values($db['cargaisons']); // Reindex array
+            $found = true;
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'Cargaison supprimée']);
+    } else {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Cargaison non trouvée']);
+    }
+}
+
+function handleDeleteColis($id) {
+    $db = getDatabase();
+    $found = false;
+    
+    foreach ($db['colis'] as $index => $colis) {
+        if ($colis['id'] === $id) {
+            unset($db['colis'][$index]);
+            $db['colis'] = array_values($db['colis']); // Reindex array
+            $found = true;
+            break;
+        }
+    }
+    
+    if ($found) {
+        saveDatabase($db);
+        echo json_encode(['success' => true, 'message' => 'Colis supprimé']);
     } else {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Colis non trouvé']);
@@ -323,14 +507,56 @@ function calculatePrice($poids, $typeProduit) {
     
     switch ($typeProduit) {
         case 'FRAGILE':
-            return $basePrice * 1.5;
+            $basePrice *= 1.5;
+            break;
         case 'CHIMIQUE':
-            return $basePrice * 2;
+            $basePrice *= 2;
+            break;
         case 'ALIMENTAIRE':
-            return $basePrice * 1.2;
+            $basePrice *= 1.2;
+            break;
         default:
-            return $basePrice;
+            // MATERIEL - no multiplier
+            break;
     }
+    
+    // Minimum price is 10,000 FCFA
+    return max(10000, $basePrice);
+}
+
+function calculateEstimatedArrival($colis) {
+    // Simple estimation based on cargo type
+    $daysToAdd = 0;
+    switch ($colis['typeCargaison']) {
+        case 'MARITIME':
+            $daysToAdd = 15;
+            break;
+        case 'AERIENNE':
+            $daysToAdd = 2;
+            break;
+        case 'ROUTIERE':
+            $daysToAdd = 7;
+            break;
+    }
+    
+    $estimatedDate = date('Y-m-d H:i:s', strtotime($colis['dateCreation'] . " +$daysToAdd days"));
+    return $estimatedDate;
+}
+
+function getLocationCoordinates($location) {
+    // Simple mapping of common locations to coordinates
+    $coordinates = [
+        'Paris' => ['latitude' => 48.8566, 'longitude' => 2.3522],
+        'New York' => ['latitude' => 40.7128, 'longitude' => -74.0060],
+        'Dakar' => ['latitude' => 14.7167, 'longitude' => -17.4677],
+        'Dubai' => ['latitude' => 25.2048, 'longitude' => 55.2708],
+        'Shanghai' => ['latitude' => 31.2304, 'longitude' => 121.4737],
+        'London' => ['latitude' => 51.5074, 'longitude' => -0.1278],
+        'Tokyo' => ['latitude' => 35.6762, 'longitude' => 139.6503],
+        'Sydney' => ['latitude' => -33.8688, 'longitude' => 151.2093]
+    ];
+    
+    return $coordinates[$location] ?? ['latitude' => 0, 'longitude' => 0];
 }
 
 function getDatabase() {
